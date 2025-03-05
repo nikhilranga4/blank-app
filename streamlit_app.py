@@ -1,16 +1,20 @@
 import streamlit as st
 from PyPDF2 import PdfReader
 import pandas as pd
+import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Function to extract text from PDF
-def extract_text_from_pdf(file):
+# Function to extract skills section from PDF
+def extract_skills_from_pdf(file):
     pdf = PdfReader(file)
     text = ""
     for page in pdf.pages:
         text += page.extract_text() or ""
-    return text.strip()
+    
+    # Extract only the skills section using regex
+    skills_section = re.search(r"(?i)(skills|technical skills|key skills)[\s\S]{0,500}", text)
+    return skills_section.group(0).strip() if skills_section else ""
 
 # Function to rank resumes based on job description
 def rank_resumes(job_description, resumes):
@@ -44,7 +48,7 @@ uploaded_files = st.file_uploader("Upload PDF files", type=["pdf"], accept_multi
 
 if uploaded_files and job_description:
     st.subheader("Candidate Ranking")
-    resumes = [extract_text_from_pdf(file) for file in uploaded_files]
+    resumes = [extract_skills_from_pdf(file) for file in uploaded_files]
     scores = rank_resumes(job_description, resumes)
 
     # Display results in a styled DataFrame
@@ -52,7 +56,7 @@ if uploaded_files and job_description:
     results = results.sort_values(by="Score (%)", ascending=False)
     
     # Add a color gradient to highlight scores
-    st.dataframe(results.style.format({"Score (%)": "{:.2f}%"}).background_gradient(cmap="Blues"))
+    st.dataframe(results.style.format({"Score (%)": "{:.2f}%"}))
 
     st.success("Ranking completed! Candidates are listed based on relevance to the job description.")
 else:
